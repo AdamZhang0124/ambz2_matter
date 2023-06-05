@@ -58,10 +58,11 @@ void matter_blemgr_set_callback_func(matter_blemgr_callback p, void *data) {
 extern bool matter_multi_adv_start_by_id(uint8_t *adv_id, uint8_t *adv_data, uint16_t adv_len, uint8_t *rsp_data, uint16_t rsp_len, uint8_t type);
 int matter_blemgr_start_adv(void) {
 	bool result = 0;
-#if CONFIG_BLE_MATTER_MULTI_ADV
+
 	result = matter_multi_adv_start_by_id(&matter_adv_id, matter_adv_data, matter_adv_data_length, NULL, 0, 1); // the last parameter 0: Matter 1: Customer
 	if (result == 1)
 		return 1;
+#if CONFIG_BLE_MATTER_MULTI_ADV_ON
 	result = matter_multi_adv_start_by_id(&customer_adv_id, customer_adv_data, customer_adv_data_length, customer_rsp_data, customer_rsp_data_length, 2);
 	if (result == 1)
 		return 1;
@@ -72,7 +73,7 @@ int matter_blemgr_start_adv(void) {
 extern bool matter_multi_adv_stop_by_id(uint8_t *adv_id);
 int matter_blemgr_stop_adv(void) {
 	bool result = 0;
-#if CONFIG_BLE_MATTER_MULTI_ADV
+
 	if (matter_multi_adapter.matter_sta_sto_flag != false) {
 		printf("[%s]adv already stop...\r\n", __func__);
 		return 1;
@@ -82,7 +83,7 @@ int matter_blemgr_stop_adv(void) {
 	if (result == 1)
 		return 1;
 	matter_multi_adapter.matter_sta_sto_flag = true;
-#endif
+
 	return 0;
 }
 

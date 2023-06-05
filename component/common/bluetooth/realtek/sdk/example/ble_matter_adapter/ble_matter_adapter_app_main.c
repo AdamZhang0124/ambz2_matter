@@ -42,9 +42,8 @@
 #include <ble_matter_adapter_app.h>
 #include <ble_matter_adapter_app_task.h>
 #include <ble_matter_adapter_app_main.h>
-#if CONFIG_BLE_MATTER_MULTI_ADV
 #include "vendor_cmd_bt.h"
-#endif
+
 /** @defgroup  CENTRAL_CLIENT_DEMO_MAIN Central Client Main
     * @brief Main file to initialize hardware and BT stack and start task scheduling
     * @{
@@ -65,9 +64,7 @@
 
 extern T_SERVER_ID ble_matter_adapter_service_id;//from app.c
 extern T_GAP_DEV_STATE ble_matter_adapter_gap_dev_state;
-#if CONFIG_BLE_MATTER_MULTI_ADV
 extern uint8_t matter_local_static_random_addr[6];
-#endif
 
 typedef struct {
 	uint8_t 	 is_exist;
@@ -194,7 +191,7 @@ void ble_matter_adapter_app_le_gap_init(void)
 #endif
 	T_APP_STATIC_RANDOM_ADDR random_addr;
 	uint8_t local_bd_type = GAP_LOCAL_ADDR_LE_RANDOM;
-#if CONFIG_BLE_MATTER_MULTI_ADV
+
 	bool gen_addr = true;
 	if (gen_addr)
 	{
@@ -209,10 +206,6 @@ void ble_matter_adapter_app_le_gap_init(void)
 	le_set_gap_param(GAP_PARAM_RANDOM_ADDR, 6, random_addr.bd_addr);
 
 	memcpy(matter_local_static_random_addr, random_addr.bd_addr, 6);
-#else
-	le_cfg_local_identity_address(random_addr.bd_addr, GAP_IDENT_ADDR_RAND);
-	le_adv_set_param(GAP_PARAM_ADV_LOCAL_ADDR_TYPE, sizeof(local_bd_type), &local_bd_type);
-#endif
 
 #if F_BT_LE_5_0_SET_PHY_SUPPORT
 	uint8_t phys_prefer = GAP_PHYS_PREFER_ALL;
@@ -223,9 +216,7 @@ void ble_matter_adapter_app_le_gap_init(void)
 	le_set_gap_param(GAP_PARAM_DEFAULT_RX_PHYS_PREFER, sizeof(rx_phys_prefer), &rx_phys_prefer);
 #endif
 
-#if CONFIG_BLE_MATTER_MULTI_ADV
 	vendor_cmd_init(ble_matter_adapter_app_vendor_callback);
-#endif
 }
 
 /**
@@ -236,12 +227,8 @@ void ble_matter_adapter_app_le_profile_init(void)
 {
 	/* Register Server Callback */
 	server_init(1);
+	ble_matter_adapter_service_id = ble_matter_adapter_service_add_service((void *)ble_matter_adapter_app_profile_callback);
 
-#if CONFIG_BLE_MATTER_MULTI_ADV
-	ble_matter_adapter_service_id = ble_matter_adapter_service_add_service((void *)ble_matter_adapter_app_profile_callback);
-#else
-	ble_matter_adapter_service_id = ble_matter_adapter_service_add_service((void *)ble_matter_adapter_app_profile_callback);
-#endif
 	server_register_app_cb(ble_matter_adapter_app_profile_callback);
 	
 	/* Add Client Module */

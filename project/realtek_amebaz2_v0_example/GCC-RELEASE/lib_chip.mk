@@ -181,7 +181,7 @@ CFLAGS += -DCONFIG_SYSTEM_TIME64=0
 endif
 
 # for matter blemgr adapter
-#CFLAGS += -DCONFIG_MATTER_BLEMGR_ADAPTER=1
+CFLAGS += -DCONFIG_MATTER_BLEMGR_ADAPTER=1
 
 # CHIP options
 # -------------------------------------------------------------------

@@ -46,7 +46,7 @@
 
 #elif CONFIG_BLE_MATTER_ADAPTER // this is defined in application.is.matter.mk
 #undef CONFIG_BLE_MATTER_MULTI_ADV
-#define CONFIG_BLE_MATTER_MULTI_ADV				1
+#define CONFIG_BLE_MATTER_MULTI_ADV_ON			1
 
 #else
 #define CONFIG_BT_MATTER_ADAPTER				1
