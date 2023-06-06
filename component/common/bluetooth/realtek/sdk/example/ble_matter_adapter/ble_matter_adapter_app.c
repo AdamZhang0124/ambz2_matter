@@ -88,12 +88,18 @@ extern bool matter_server_is_commissioned();
 /*============================================================================*
  *                              Multi ADV Functions
  *============================================================================*/
-uint8_t matter_get_unused_adv_index(void)
+uint8_t matter_get_unused_adv_index(int type)
 {
-	int i;
-	for(i= 0; i < MAX_ADV_NUMBER; i++){
-		if(!matter_multi_adv_param_array[i].is_used)
-			return i;
+	if (type == 1) { //matter
+		if(!matter_multi_adv_param_array[0].is_used)
+		{
+			return 0;
+		}
+	} else if (type == 2) { //customer
+		if(!matter_multi_adv_param_array[1].is_used)
+		{
+			return 1;
+		}
 	}
 	return MAX_ADV_NUMBER;
 }
@@ -132,8 +138,8 @@ bool matter_multi_adv_start_by_id(uint8_t *adv_id, uint8_t *adv_data, uint16_t a
 	if ((MAX_ADV_NUMBER != *adv_id) && (matter_multi_adv_param_array[*adv_id].is_used == 1)) {
 		os_timer_stop(&matter_multi_adv_param_array[*adv_id].one_shot_timer);
 	} else {
-	
-		*adv_id = matter_get_unused_adv_index();
+
+		*adv_id = matter_get_unused_adv_index(type);
 		if(MAX_ADV_NUMBER == *adv_id){
 			printf("[%s] Extend the max adv num %d\r\n", __func__, MAX_ADV_NUMBER);
 			return 1;
@@ -143,6 +149,7 @@ bool matter_multi_adv_start_by_id(uint8_t *adv_id, uint8_t *adv_data, uint16_t a
 	uint8_t adv_index = *adv_id;
 	M_MULTI_ADV_PARAM *h_adv_param;
 	h_adv_param = matter_multi_adv_param_array + adv_index;
+		
 	if (!h_adv_param->update_adv_mutex) {
 		os_mutex_create(&h_adv_param->update_adv_mutex);
 	}
@@ -156,6 +163,7 @@ bool matter_multi_adv_start_by_id(uint8_t *adv_id, uint8_t *adv_data, uint16_t a
 		h_adv_param->H_adv_intval = matter_adv_interval;
 		h_adv_param->is_used = 1;
 		h_adv_param->type = 1;
+		h_adv_param->adv_id = 1;
 		matter_multi_adapter.matter_sta_sto_flag = false;
 		os_mutex_give(h_adv_param->update_adv_mutex);
 #if CONFIG_BLE_MATTER_MULTI_ADV_ON
@@ -169,6 +177,7 @@ bool matter_multi_adv_start_by_id(uint8_t *adv_id, uint8_t *adv_data, uint16_t a
 		h_adv_param->H_adv_intval = 320;
 		h_adv_param->is_used = 1;
 		h_adv_param->type = 2;
+		h_adv_param->adv_id = 2;
 		matter_multi_adapter.customer_sta_sto_flag = false;
 		os_mutex_give(h_adv_param->update_adv_mutex);
 #endif
@@ -214,55 +223,58 @@ uint8_t ble_matter_adapter_judge_adv_stop(uint8_t adv_id)
 void ble_matter_adapter_multi_adv_task_func(void *arg)
 {
 	(void)arg;
-	uint8_t adv_id;
+	uint8_t adv_index;
 	uint8_t adv_stop_flag = 0;
 
 	while (true) {
-		if (os_msg_recv(matter_multi_adapter.queue_handle, &adv_id, 0xFFFFFFFF) == true) {
-			if (adv_id == matter_multi_adv_bt_deinit_id) { // If deinit, break the outer while loop
+		if (os_msg_recv(matter_multi_adapter.queue_handle, &adv_index, 0xFFFFFFFF) == true) {
+			if (adv_index == matter_multi_adv_bt_deinit_id) { // If deinit, break the outer while loop
 				printf("[%s]device ble deinit flag is set, break\r\n", __func__);
 				break;
 #if CONFIG_BLE_MATTER_MULTI_ADV_ON
-			} else if (adv_id == customer_adv_id) {
-				printf("[%s] adv_id = %d  customer_adv_id\r\n", __func__, adv_id);
+			} else if (adv_index == customer_adv_id) {
+				printf("[%s] adv_index = %d  customer_adv_id\r\n", __func__, adv_index);
 				matter_multi_adapter.adv_id = customer_adv_id;
 				if (matter_multi_adapter.customer_sta_sto_flag == true) {
-					printf("[%s]stop customer conn adv flag is set[%d]continue\r\n", __func__, adv_id);
+					printf("[%s]stop customer conn adv flag is set[%d]continue\r\n", __func__, adv_index);
 					continue;
 				}
 #endif
-			} else if (adv_id == matter_adv_id) {
-				printf("[%s] adv_id = %d  matter_adv_id\r\n", __func__, adv_id);
+			}
+			else if (adv_index == matter_adv_id)
+			{
+				printf("[%s] adv_index = %d  matter_adv_id\r\n", __func__, adv_index);
 				matter_multi_adapter.adv_id = matter_adv_id;
 				if (matter_multi_adapter.matter_sta_sto_flag == true) {
-					printf("[%s]stop matter conn adv flag is set[%d], continue\r\n", __func__, adv_id);
+					printf("[%s]stop matter conn adv flag is set[%d], continue\r\n", __func__, adv_index);
 					continue;
 				}
-			} else {
+			}
+			else
+			{
 				continue;
 			}
 
-			matter_multi_adv_param_array[adv_id].adv_id = adv_id;
-			if (matter_multi_adv_param_array[adv_id].local_bd_type == GAP_LOCAL_ADDR_LE_PUBLIC) {
+			if (matter_multi_adv_param_array[adv_index].local_bd_type == GAP_LOCAL_ADDR_LE_PUBLIC) {
 				le_cfg_local_identity_address(matter_local_public_addr, GAP_IDENT_ADDR_PUBLIC);
-			} else if (matter_multi_adv_param_array[adv_id].local_bd_type == GAP_LOCAL_ADDR_LE_RANDOM) {
+			} else if (matter_multi_adv_param_array[adv_index].local_bd_type == GAP_LOCAL_ADDR_LE_RANDOM) {
 				le_cfg_local_identity_address(matter_local_static_random_addr, GAP_IDENT_ADDR_RAND);
 			}
-			le_adv_set_param(GAP_PARAM_ADV_LOCAL_ADDR_TYPE, sizeof(matter_multi_adv_param_array[adv_id].local_bd_type), &matter_multi_adv_param_array[adv_id].local_bd_type);
-			if (matter_multi_adv_param_array[adv_id].update_adv_mutex) {
-				os_mutex_take(matter_multi_adv_param_array[adv_id].update_adv_mutex, 0xFFFF);
-				le_adv_set_param(GAP_PARAM_ADV_DATA, matter_multi_adv_param_array[adv_id].adv_datalen, (void *)matter_multi_adv_param_array[adv_id].adv_data);
-				if (matter_multi_adv_param_array[adv_id].type == 2) { //customer
-					le_adv_set_param(GAP_PARAM_SCAN_RSP_DATA, matter_multi_adv_param_array[adv_id].scanrsp_datalen, (void *)matter_multi_adv_param_array[adv_id].scanrsp_data);
-				} else if (matter_multi_adv_param_array[adv_id].type == 1) { //matter
-					le_adv_set_param(GAP_PARAM_ADV_INTERVAL_MIN, sizeof(matter_multi_adv_param_array[adv_id].adv_int_min), &matter_multi_adv_param_array[adv_id].adv_int_min);
-					le_adv_set_param(GAP_PARAM_ADV_INTERVAL_MAX, sizeof(matter_multi_adv_param_array[adv_id].adv_int_max), &matter_multi_adv_param_array[adv_id].adv_int_max);
+			le_adv_set_param(GAP_PARAM_ADV_LOCAL_ADDR_TYPE, sizeof(matter_multi_adv_param_array[adv_index].local_bd_type), &matter_multi_adv_param_array[adv_index].local_bd_type);
+			if (matter_multi_adv_param_array[adv_index].update_adv_mutex) {
+				os_mutex_take(matter_multi_adv_param_array[adv_index].update_adv_mutex, 0xFFFF);
+				le_adv_set_param(GAP_PARAM_ADV_DATA, matter_multi_adv_param_array[adv_index].adv_datalen, (void *)matter_multi_adv_param_array[adv_index].adv_data);
+				if (matter_multi_adv_param_array[adv_index].type == 2) { //customer
+					le_adv_set_param(GAP_PARAM_SCAN_RSP_DATA, matter_multi_adv_param_array[adv_index].scanrsp_datalen, (void *)matter_multi_adv_param_array[adv_index].scanrsp_data);
+				} else if (matter_multi_adv_param_array[adv_index].type == 1) { //matter
+					le_adv_set_param(GAP_PARAM_ADV_INTERVAL_MIN, sizeof(matter_multi_adv_param_array[adv_index].adv_int_min), &matter_multi_adv_param_array[adv_index].adv_int_min);
+					le_adv_set_param(GAP_PARAM_ADV_INTERVAL_MAX, sizeof(matter_multi_adv_param_array[adv_index].adv_int_max), &matter_multi_adv_param_array[adv_index].adv_int_max);
 				}
-				os_mutex_give(matter_multi_adv_param_array[adv_id].update_adv_mutex);
+				os_mutex_give(matter_multi_adv_param_array[adv_index].update_adv_mutex);
 			} else {
-				printf("[%s]update_adv_mutex is NULL[%d]\r\n", __func__, adv_id);
+				printf("[%s]update_adv_mutex is NULL[%d]\r\n", __func__, adv_index);
 			}
-			if (ble_matter_adapter_app_send_api_msg(0, &matter_multi_adv_param_array[adv_id]) == false) {
+			if (ble_matter_adapter_app_send_api_msg(0, &matter_multi_adv_param_array[adv_index]) == false) {
 				printf("[%s]send api msg fail\r\n", __func__);
 				continue;
 			}

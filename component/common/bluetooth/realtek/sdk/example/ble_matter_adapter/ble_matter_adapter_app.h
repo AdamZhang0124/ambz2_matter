@@ -142,7 +142,7 @@ typedef struct {
 /*============================================================================*
  *                              Functions
  *============================================================================*/
-uint8_t matter_get_unused_adv_index(void);
+uint8_t matter_get_unused_adv_index(int type);
 
 bool matter_matter_ble_adv_stop_by_adv_id(uint8_t *adv_id);
 

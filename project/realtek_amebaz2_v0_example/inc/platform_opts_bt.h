@@ -45,8 +45,8 @@
 #define CONFIG_BT_MESH_DEVICE_MATTER				1
 
 #elif CONFIG_BLE_MATTER_ADAPTER // this is defined in application.is.matter.mk
-#undef CONFIG_BLE_MATTER_MULTI_ADV
-#define CONFIG_BLE_MATTER_MULTI_ADV_ON			1
+#undef CONFIG_BLE_MATTER_MULTI_ADV_ON
+#define CONFIG_BLE_MATTER_MULTI_ADV_ON			0
 
 #else
 #define CONFIG_BT_MATTER_ADAPTER				1
